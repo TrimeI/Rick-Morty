@@ -63,7 +63,7 @@ const App = () => {
   const [language, setLanguage] = useState('en');
   const [mode, setMode] = useState('pagination'); // 'pagination' or 'infinite-scroll'
   const observerRef = useRef(null);
-  const itemsPerLoad = 3;
+  const itemsPerLoad = 20;
 
   const { loading, error, data, fetchMore } = useQuery(GET_CHARACTERS, {
     variables: { page: 1 },
