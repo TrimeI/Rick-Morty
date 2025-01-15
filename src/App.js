@@ -57,13 +57,10 @@ const App = () => {
   const [filteredCharacters, setFilteredCharacters] = useState([]);
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedSpecies, setSelectedSpecies] = useState('');
-  const [sortBy, setSortBy] = useState('');
+  const [filters, setFilters] = useState({ status: '', species: '', sortBy: '' });
   const [language, setLanguage] = useState('en');
-  const [mode, setMode] = useState('pagination'); // 'pagination' or 'infinite-scroll'
+  const [mode, setMode] = useState('pagination');
   const observerRef = useRef(null);
-  const itemsPerLoad = 20;
 
   const { loading, error, data, fetchMore } = useQuery(GET_CHARACTERS, {
     variables: { page: 1 },
@@ -73,32 +70,31 @@ const App = () => {
   const t = translations[language];
 
   useEffect(() => {
-    if (data) {
+    if (data && mode === 'infinite-scroll') {
       setCharacters((prev) => [...prev, ...data.characters.results]);
       setLoadingMore(false);
     }
   }, [data]);
 
   useEffect(() => {
-    let result = characters;
+    const applyFilters = () => {
+      let result = characters;
+      const { status, species, sortBy } = filters;
 
-    // Apply filters
-    if (selectedStatus) {
-      result = result.filter((char) => char.status === selectedStatus);
-    }
-    if (selectedSpecies) {
-      result = result.filter((char) => char.species === selectedSpecies);
-    }
+      if (status) result = result.filter((char) => char.status === status);
+      if (species) result = result.filter((char) => char.species === species);
 
-    // Apply sorting
-    if (sortBy === 'name-asc') {
-      result.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortBy === 'name-desc') {
-      result.sort((a, b) => b.name.localeCompare(a.name));
-    }
+      if (sortBy === 'name-asc') {
+        result.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (sortBy === 'name-desc') {
+        result.sort((a, b) => b.name.localeCompare(a.name));
+      }
 
-    setFilteredCharacters(result);
-  }, [characters, selectedStatus, selectedSpecies, sortBy]);
+      setFilteredCharacters(result);
+    };
+
+    applyFilters();
+  }, [characters, filters]);
 
   const handleScroll = (entries) => {
     const [entry] = entries;
@@ -110,20 +106,16 @@ const App = () => {
       data?.characters.info.next
     ) {
       setLoadingMore(true);
-
-      fetchMore({
-        variables: { page: page + 1 },
-      }).then((fetchMoreResult) => {
-        setCharacters((prev) => [
-          ...prev,
-          ...fetchMoreResult.data.characters.results,
-        ]);
-        setPage((prev) => prev + 1);
-        setLoadingMore(false);
-      }).catch((error) => {
-        console.error('Error fetching more characters:', error);
-        setLoadingMore(false);
-      });
+      fetchMore({ variables: { page: page + 1 } })
+        .then((fetchMoreResult) => {
+          setCharacters((prev) => [
+            ...prev,
+            ...fetchMoreResult.data.characters.results,
+          ]);
+          setPage((prev) => prev + 1);
+          setLoadingMore(false);
+        })
+        .catch(() => setLoadingMore(false));
     }
   };
 
@@ -134,6 +126,7 @@ const App = () => {
         rootMargin: '0px',
         threshold: 1.0,
       });
+
       if (observerRef.current) observer.observe(observerRef.current);
 
       return () => {
@@ -142,23 +135,22 @@ const App = () => {
     }
   }, [observerRef, loadingMore, data, mode]);
 
-  const goToNextPage = () => {
-    if (data?.characters.info.next) {
-      setPage((prev) => prev + 1);
-      fetchMore({
-        variables: { page: page + 1 },
-      });
-    }
+  const changePage = (newPage) => {
+    fetchMore({ variables: { page: newPage } })
+      .then((fetchMoreResult) => {
+        setCharacters(fetchMoreResult.data.characters.results);
+        setPage(newPage);
+      })
+      .catch(() => {});
   };
 
-  const goToPreviousPage = () => {
-    if (page > 1) {
-      setPage((prev) => prev - 1);
-      fetchMore({
-        variables: { page: page - 1 },
-      });
+  useEffect(() => {
+    if (mode === 'pagination') {
+      setPage(1);
+      setCharacters([]);
+      changePage(1);
     }
-  };
+  }, [mode]);
 
   if (loading && page === 1) return <p>Loading...</p>;
   if (error) return <p>Error! {error.message}</p>;
@@ -167,16 +159,12 @@ const App = () => {
     <div className="container">
       <h1>{t.title}</h1>
 
-      {/* Filters, Sorting, Language Selector, and Mode Toggle */}
       <div className="controls">
         <div>
           <label>{t.filterStatus}:</label>
           <select
-            value={selectedStatus}
-            onChange={(e) => {
-              setSelectedStatus(e.target.value);
-              setPage(1);
-            }}
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
           >
             <option value="">{t.all}</option>
             <option value="Alive">{t.alive}</option>
@@ -188,11 +176,8 @@ const App = () => {
         <div>
           <label>{t.filterSpecies}:</label>
           <select
-            value={selectedSpecies}
-            onChange={(e) => {
-              setSelectedSpecies(e.target.value);
-              setPage(1);
-            }}
+            value={filters.species}
+            onChange={(e) => setFilters({ ...filters, species: e.target.value })}
           >
             <option value="">{t.all}</option>
             <option value="Human">Human</option>
@@ -203,8 +188,8 @@ const App = () => {
         <div>
           <label>{t.sortBy}:</label>
           <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
+            value={filters.sortBy}
+            onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
           >
             <option value="">None</option>
             <option value="name-asc">Name (A-Z)</option>
@@ -214,10 +199,7 @@ const App = () => {
 
         <div>
           <label>{t.changeLanguage}:</label>
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-          >
+          <select value={language} onChange={(e) => setLanguage(e.target.value)}>
             <option value="en">English</option>
             <option value="de">German</option>
           </select>
@@ -245,31 +227,32 @@ const App = () => {
         </div>
       </div>
 
-      {/* Character List */}
       <div className="character-list">
-        {filteredCharacters.slice(0, page * itemsPerLoad).map((character) => (
+        {filteredCharacters.map((character) => (
           <CharacterInfo key={character.id} character={character} />
         ))}
       </div>
 
-      {/* Pagination Controls */}
       {mode === 'pagination' && (
         <div className="pagination-buttons">
-          <button onClick={goToPreviousPage} disabled={page === 1}>
+          <button onClick={() => changePage(page - 1)} disabled={page === 1}>
             Previous
           </button>
-          <span>
-            Page {page}
-          </span>
-          <button onClick={goToNextPage} disabled={!data?.characters.info.next}>
+          <span>Page {page}</span>
+          <button
+            onClick={() => changePage(page + 1)}
+            disabled={!data?.characters.info.next}
+          >
             Next
           </button>
         </div>
       )}
 
-      {/* Infinite Scroll Observer */}
       {mode === 'infinite-scroll' && (
-        <div ref={observerRef} style={{ height: '50px', background: 'transparent' }}>
+        <div
+          ref={observerRef}
+          style={{ height: '50px', background: 'transparent' }}
+        >
           {loadingMore && <p>Loading more...</p>}
         </div>
       )}
