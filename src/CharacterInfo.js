@@ -1,16 +1,31 @@
 import React from 'react';
 
 const CharacterInfo = ({ character }) => {
+  const { image, name, status, species, gender, origin } = character;
+
   return (
-    <li className="card" style={{ margin: '1rem', padding: '1rem', border: '1px solid #ddd' }}>
-      <img src={character.image} alt={character.name} style={{ width: '150px', height: '150px' }} />
-      <h3>{character.name}</h3>
-      <p>Status: {character.status}</p>
-      <p>Species: {character.species}</p>
-      <p>Gender: {character.gender}</p>
-      <p>Origin: {character.origin.name}</p>
+    <li className="card">
+      <img src={image} alt={name} className="card-image" />
+      <div className="card-content">
+        <h3 className="card-title">{name}</h3>
+        <CharacterDetails 
+          status={status} 
+          species={species} 
+          gender={gender} 
+          origin={origin.name} 
+        />
+      </div>
     </li>
   );
 };
+
+const CharacterDetails = ({ status, species, gender, origin }) => (
+  <div className="card-details">
+    <p>Status: {status}</p>
+    <p>Species: {species}</p>
+    <p>Gender: {gender}</p>
+    <p>Origin: {origin}</p>
+  </div>
+);
 
 export default CharacterInfo;
