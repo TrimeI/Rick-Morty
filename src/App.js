@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; 
 import { gql, useQuery } from '@apollo/client';
 import CharacterInfo from './CharacterInfo';
 
@@ -34,6 +34,8 @@ const translations = {
     dead: "Dead",
     unknown: "Unknown",
     changeLanguage: "Change Language",
+    pagination: "Pagination",
+    infiniteScroll: "Infinite Scroll",
   },
   de: {
     title: "Rick und Morty Charaktere",
@@ -45,6 +47,8 @@ const translations = {
     dead: "Tot",
     unknown: "Unbekannt",
     changeLanguage: "Sprache ändern",
+    pagination: "Seitennavigation",
+    infiniteScroll: "Unendliches Scrollen",
   },
 };
 
@@ -57,6 +61,7 @@ const App = () => {
   const [selectedSpecies, setSelectedSpecies] = useState('');
   const [sortBy, setSortBy] = useState('');
   const [language, setLanguage] = useState('en');
+  const [mode, setMode] = useState('pagination'); // 'pagination' or 'infinite-scroll'
   const observerRef = useRef(null);
   const itemsPerLoad = 3;
 
@@ -98,7 +103,12 @@ const App = () => {
   const handleScroll = (entries) => {
     const [entry] = entries;
 
-    if (entry.isIntersecting && !loadingMore && data?.characters.info.next) {
+    if (
+      mode === 'infinite-scroll' &&
+      entry.isIntersecting &&
+      !loadingMore &&
+      data?.characters.info.next
+    ) {
       setLoadingMore(true);
 
       fetchMore({
@@ -118,17 +128,37 @@ const App = () => {
   };
 
   useEffect(() => {
-    const observer = new IntersectionObserver(handleScroll, {
-      root: null,
-      rootMargin: '0px',
-      threshold: 1.0,
-    });
-    if (observerRef.current) observer.observe(observerRef.current);
+    if (mode === 'infinite-scroll') {
+      const observer = new IntersectionObserver(handleScroll, {
+        root: null,
+        rootMargin: '0px',
+        threshold: 1.0,
+      });
+      if (observerRef.current) observer.observe(observerRef.current);
 
-    return () => {
-      if (observerRef.current) observer.unobserve(observerRef.current);
-    };
-  }, [observerRef, loadingMore, data]);
+      return () => {
+        if (observerRef.current) observer.unobserve(observerRef.current);
+      };
+    }
+  }, [observerRef, loadingMore, data, mode]);
+
+  const goToNextPage = () => {
+    if (data?.characters.info.next) {
+      setPage((prev) => prev + 1);
+      fetchMore({
+        variables: { page: page + 1 },
+      });
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (page > 1) {
+      setPage((prev) => prev - 1);
+      fetchMore({
+        variables: { page: page - 1 },
+      });
+    }
+  };
 
   if (loading && page === 1) return <p>Loading...</p>;
   if (error) return <p>Error! {error.message}</p>;
@@ -137,7 +167,7 @@ const App = () => {
     <div className="container">
       <h1>{t.title}</h1>
 
-      {/* Filters, Sorting, and Language Selector */}
+      {/* Filters, Sorting, Language Selector, and Mode Toggle */}
       <div className="controls">
         <div>
           <label>{t.filterStatus}:</label>
@@ -192,6 +222,27 @@ const App = () => {
             <option value="de">German</option>
           </select>
         </div>
+
+        <div>
+          <label>
+            <input
+              type="radio"
+              value="pagination"
+              checked={mode === 'pagination'}
+              onChange={() => setMode('pagination')}
+            />
+            {t.pagination}
+          </label>
+          <label>
+            <input
+              type="radio"
+              value="infinite-scroll"
+              checked={mode === 'infinite-scroll'}
+              onChange={() => setMode('infinite-scroll')}
+            />
+            {t.infiniteScroll}
+          </label>
+        </div>
       </div>
 
       {/* Character List */}
@@ -201,10 +252,27 @@ const App = () => {
         ))}
       </div>
 
-      {/* Observer */}
-      <div ref={observerRef} style={{ height: '50px', background: 'transparent' }}>
-        {loadingMore && <p>Loading more...</p>}
-      </div>
+      {/* Pagination Controls */}
+      {mode === 'pagination' && (
+        <div className="pagination-buttons">
+          <button onClick={goToPreviousPage} disabled={page === 1}>
+            Previous
+          </button>
+          <span>
+            Page {page}
+          </span>
+          <button onClick={goToNextPage} disabled={!data?.characters.info.next}>
+            Next
+          </button>
+        </div>
+      )}
+
+      {/* Infinite Scroll Observer */}
+      {mode === 'infinite-scroll' && (
+        <div ref={observerRef} style={{ height: '50px', background: 'transparent' }}>
+          {loadingMore && <p>Loading more...</p>}
+        </div>
+      )}
     </div>
   );
 };
