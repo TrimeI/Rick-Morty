@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; 
+import React, { useState, useEffect, useRef } from 'react';
 import { gql, useQuery } from '@apollo/client';
 import CharacterInfo from './CharacterInfo';
 
@@ -36,6 +36,10 @@ const translations = {
     changeLanguage: "Change Language",
     pagination: "Pagination",
     infiniteScroll: "Infinite Scroll",
+    status: "Status",
+    species: "Species",
+    gender: "Gender",
+    origin: "Origin",
   },
   de: {
     title: "Rick und Morty Charaktere",
@@ -49,6 +53,10 @@ const translations = {
     changeLanguage: "Sprache ändern",
     pagination: "Seitennavigation",
     infiniteScroll: "Unendliches Scrollen",
+    status: "Status",
+    species: "Spezies",
+    gender: "Geschlecht",
+    origin: "Herkunft",
   },
 };
 
@@ -62,6 +70,7 @@ const App = () => {
   const [sortBy, setSortBy] = useState('');
   const [language, setLanguage] = useState('en');
   const [mode, setMode] = useState('pagination');
+  const [modeChanged, setModeChanged] = useState(false);
   const observerRef = useRef(null);
   const itemsPerLoad = 20;
 
@@ -80,7 +89,7 @@ const App = () => {
   }, [data]);
 
   useEffect(() => {
-    let result = characters;
+    let result = [...characters];
 
     if (selectedStatus) {
       result = result.filter((char) => char.status === selectedStatus);
@@ -146,7 +155,9 @@ const App = () => {
       }).then((fetchMoreResult) => {
         setCharacters(fetchMoreResult.data.characters.results);
         setPage((prev) => prev + 1);
-        window.scrollTo(0, 0);
+        if (mode === 'pagination') {
+          window.scrollTo(0, 0);
+        }
       }).catch((error) => {});
     }
   };
@@ -158,7 +169,9 @@ const App = () => {
       }).then((fetchMoreResult) => {
         setCharacters(fetchMoreResult.data.characters.results);
         setPage((prev) => prev - 1);
-        window.scrollTo(0, 0);
+        if (mode === 'pagination') {
+          window.scrollTo(0, 0);
+        }
       }).catch((error) => {});
     }
   };
@@ -171,8 +184,14 @@ const App = () => {
         variables: { page: 1 },
       }).then((fetchMoreResult) => {
         setCharacters(fetchMoreResult.data.characters.results);
+        if (!modeChanged) {
+          window.scrollTo(0, 0);
+        }
       }).catch((error) => {});
+    } else if (mode === 'infinite-scroll') {
+      setPage(1);
     }
+    setModeChanged(false);
   }, [mode, fetchMore]);
 
   if (loading && page === 1) return <p>Loading...</p>;
@@ -243,7 +262,10 @@ const App = () => {
               type="radio"
               value="pagination"
               checked={mode === 'pagination'}
-              onChange={() => setMode('pagination')}
+              onChange={() => {
+                setMode('pagination');
+                setModeChanged(true);
+              }}
             />
             {t.pagination}
           </label>
@@ -252,7 +274,10 @@ const App = () => {
               type="radio"
               value="infinite-scroll"
               checked={mode === 'infinite-scroll'}
-              onChange={() => setMode('infinite-scroll')}
+              onChange={() => {
+                setMode('infinite-scroll');
+                setModeChanged(true);
+              }}
             />
             {t.infiniteScroll}
           </label>
@@ -260,8 +285,8 @@ const App = () => {
       </div>
 
       <div className="character-list">
-        {characters.map((character) => (
-          <CharacterInfo key={character.id} character={character} />
+        {filteredCharacters.map((character) => (
+          <CharacterInfo key={character.id} character={character} t={translations[language]} />
         ))}
       </div>
 
