@@ -14,7 +14,7 @@ A fun and interactive web application built with React, Apollo Client, and Graph
   - Filter characters by *Status* (Alive, Dead, Unknown)
   - Filter characters by *Species* (Human, Alien)
 3. Sorting:
-  - Sort characters by *Name* or *Origin*
+  - Sort characters by *Name* and *Origin*
 4. Pagination:
   - Paginate through results to display a limited number of characters per page.
   - Option to use *Infinite Scrolling* for dynamic data loading as the user scrolls.
