@@ -29,6 +29,8 @@ const translations = {
     filterStatus: "Filter by Status",
     filterSpecies: "Filter by Species",
     sortBy: "Sort by",
+    sortName: "Name",
+    sortOrigin: "Origin",
     all: "All",
     alive: "Alive",
     dead: "Dead",
@@ -40,12 +42,17 @@ const translations = {
     species: "Species",
     gender: "Gender",
     origin: "Origin",
+    next: "Next", 
+    previous: "Previous", 
+    page: "Page", 
   },
   de: {
     title: "Rick und Morty Charaktere",
     filterStatus: "Nach Status filtern",
     filterSpecies: "Nach Spezies filtern",
     sortBy: "Sortieren nach",
+    sortName: "Name",
+    sortOrigin: "Herkunft",
     all: "Alle",
     alive: "Lebendig",
     dead: "Tot",
@@ -57,6 +64,9 @@ const translations = {
     species: "Spezies",
     gender: "Geschlecht",
     origin: "Herkunft",
+    next: "Weiter", 
+    previous: "Zurück", 
+    page: "Seite", 
   },
 };
 
@@ -67,7 +77,8 @@ const App = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedSpecies, setSelectedSpecies] = useState('');
-  const [sortBy, setSortBy] = useState('');
+  const [sortByName, setSortByName] = useState('');
+  const [sortByOrigin, setSortByOrigin] = useState('');
   const [language, setLanguage] = useState('en');
   const [mode, setMode] = useState('pagination');
   const [modeChanged, setModeChanged] = useState(false);
@@ -98,14 +109,20 @@ const App = () => {
       result = result.filter((char) => char.species === selectedSpecies);
     }
 
-    if (sortBy === 'name-asc') {
+    if (sortByName === 'name-asc') {
       result.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortBy === 'name-desc') {
+    } else if (sortByName === 'name-desc') {
       result.sort((a, b) => b.name.localeCompare(a.name));
     }
 
+    if (sortByOrigin === 'origin-asc') {
+      result.sort((a, b) => a.origin.name.localeCompare(b.origin.name));
+    } else if (sortByOrigin === 'origin-desc') {
+      result.sort((a, b) => b.origin.name.localeCompare(a.origin.name));
+    }
+
     setFilteredCharacters(result);
-  }, [characters, selectedStatus, selectedSpecies, sortBy]);
+  }, [characters, selectedStatus, selectedSpecies, sortByName, sortByOrigin]);
 
   const handleScroll = (entries) => {
     const [entry] = entries;
@@ -120,16 +137,15 @@ const App = () => {
 
       fetchMore({
         variables: { page: page + 1 },
-      }).then((fetchMoreResult) => {
-        setCharacters((prev) => [
-          ...prev,
-          ...fetchMoreResult.data.characters.results,
-        ]);
-        setPage((prev) => prev + 1);
-        setLoadingMore(false);
-      }).catch((error) => {
-        setLoadingMore(false);
-      });
+      })
+        .then((fetchMoreResult) => {
+          setCharacters((prev) => [...prev, ...fetchMoreResult.data.characters.results]);
+          setPage((prev) => prev + 1);
+          setLoadingMore(false);
+        })
+        .catch((error) => {
+          setLoadingMore(false);
+        });
     }
   };
 
@@ -152,13 +168,15 @@ const App = () => {
     if (data?.characters.info.next) {
       fetchMore({
         variables: { page: page + 1 },
-      }).then((fetchMoreResult) => {
-        setCharacters(fetchMoreResult.data.characters.results);
-        setPage((prev) => prev + 1);
-        if (mode === 'pagination') {
-          window.scrollTo(0, 0);
-        }
-      }).catch((error) => {});
+      })
+        .then((fetchMoreResult) => {
+          setCharacters(fetchMoreResult.data.characters.results);
+          setPage((prev) => prev + 1);
+          if (mode === 'pagination') {
+            window.scrollTo(0, 0);
+          }
+        })
+        .catch((error) => {});
     }
   };
 
@@ -166,13 +184,15 @@ const App = () => {
     if (page > 1) {
       fetchMore({
         variables: { page: page - 1 },
-      }).then((fetchMoreResult) => {
-        setCharacters(fetchMoreResult.data.characters.results);
-        setPage((prev) => prev - 1);
-        if (mode === 'pagination') {
-          window.scrollTo(0, 0);
-        }
-      }).catch((error) => {});
+      })
+        .then((fetchMoreResult) => {
+          setCharacters(fetchMoreResult.data.characters.results);
+          setPage((prev) => prev - 1);
+          if (mode === 'pagination') {
+            window.scrollTo(0, 0);
+          }
+        })
+        .catch((error) => {});
     }
   };
 
@@ -182,12 +202,14 @@ const App = () => {
       setCharacters([]);
       fetchMore({
         variables: { page: 1 },
-      }).then((fetchMoreResult) => {
-        setCharacters(fetchMoreResult.data.characters.results);
-        if (!modeChanged) {
-          window.scrollTo(0, 0);
-        }
-      }).catch((error) => {});
+      })
+        .then((fetchMoreResult) => {
+          setCharacters(fetchMoreResult.data.characters.results);
+          if (!modeChanged) {
+            window.scrollTo(0, 0);
+          }
+        })
+        .catch((error) => {});
     } else if (mode === 'infinite-scroll') {
       setPage(1);
     }
@@ -236,12 +258,21 @@ const App = () => {
         <div>
           <label>{t.sortBy}:</label>
           <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
+            value={sortByName}
+            onChange={(e) => setSortByName(e.target.value)}
           >
-            <option value="">None</option>
-            <option value="name-asc">Name (A-Z)</option>
-            <option value="name-desc">Name (Z-A)</option>
+            <option value="">{t.sortName}</option>
+            <option value="name-asc">{t.sortName} (A-Z)</option>
+            <option value="name-desc">{t.sortName} (Z-A)</option>
+          </select>
+
+          <select
+            value={sortByOrigin}
+            onChange={(e) => setSortByOrigin(e.target.value)}
+          >
+            <option value="">{t.sortOrigin}</option>
+            <option value="origin-asc">{t.sortOrigin} (A-Z)</option>
+            <option value="origin-desc">{t.sortOrigin} (Z-A)</option>
           </select>
         </div>
 
@@ -293,11 +324,11 @@ const App = () => {
       {mode === 'pagination' && (
         <div className="pagination-buttons">
           <button onClick={goToPreviousPage} disabled={page === 1}>
-            Previous
+            {t.previous}
           </button>
           <span>Page {page}</span>
           <button onClick={goToNextPage} disabled={!data?.characters.info.next}>
-            Next
+            {t.next}
           </button>
         </div>
       )}
